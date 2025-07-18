@@ -9,8 +9,12 @@ Then modify the fields in the .env file as needed.
 ```bash
 git clone https://github.com/cnitlrt/ChatBridge
 cd ChatBridge
+git submodule update --init --recursive
 uv venv --python 3.12
 uv pip install -e .
+cd Turnstile-Solver
+uv pip install -r requirements.txt
+uv run api_solver.py --browser_type camoufox --headless True --host 0.0.0.0
 ```
 
 ## Usage
@@ -18,7 +22,8 @@ uv pip install -e .
 ```python
 from chatbridge import *
 @app.post("/v1/chat/completions")
-@chatCompletions
+@chatCompletions(build_all_prompt=1)
+# For 2api websites, sometimes continuous conversation is not supported, so if build_all_prompt == 1, all messages need to be concatenated into one prompt
 def retool(prompt: str, new_session: bool = False, model: str = "gpt-4o"):
     """
     some code

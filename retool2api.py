@@ -15,6 +15,10 @@ chat_id = 0
 access_token = os.getenv("accessToken")
 x_xsrf_token = os.getenv("x_xsrf_token")
 url_header = os.getenv("url_header")
+if not access_token or not x_xsrf_token or not url_header:
+    raise ValueError(
+        "accessToken, x_xsrf_token, or url_header is not set in the environment variables."
+    )
 
 
 def get_agent_id():
@@ -39,7 +43,7 @@ agent_id = get_agent_id()
 
 
 @app.post("/v1/chat/completions")
-@chatCompletions
+@chatCompletions(1)
 def retool(prompt: str, new_session: bool = False, model: str = "gpt-4o"):
     global chat_id
     print(new_session, chat_id)

@@ -6,7 +6,8 @@ import uuid
 from prompt.prompt import TOOLCALL_PRMPT
 import re
 
-# 常量定义
+
+# Constant definitions
 OBJECT_MODEL = "model"
 OBJECT_LIST = "list"
 OBJECT_CHAT_COMPLETION = "chat.completion"
@@ -24,7 +25,7 @@ FUNCTION_CALL_PATTERN = (
 ARGS_PATTERN = r"<(\w+)>(.*?)</\1>"
 
 
-# 请求体
+# Request body
 class Model(BaseModel):
     id: str
     object: str
@@ -32,7 +33,7 @@ class Model(BaseModel):
     owned_by: str
 
 
-# 请求model
+# Request models
 class Models(BaseModel):
     object: str
     data: List[Model]
@@ -67,7 +68,7 @@ class Messages(BaseModel):
     tool_calls: List[ToolCalls] = Field(default_factory=list)
 
 
-# 默认请求
+# Default request
 class ChatResponse(BaseModel):
     messages: List[Messages]
     temperature: float = 0.0
@@ -76,14 +77,14 @@ class ChatResponse(BaseModel):
     tools: List[Tools] = Field(default_factory=list)
 
 
-# 响应体
+# Response body
 class Choice(BaseModel):
     index: int
     message: Messages
     finish_reason: str = FINISH_REASON_STOP
 
 
-# 非流式
+# Non-streaming
 class CompletionRes(BaseModel):
     id: str
     object: str
@@ -93,7 +94,7 @@ class CompletionRes(BaseModel):
     usage: dict
 
 
-# 流式 含有delta
+# Streaming with delta
 class ChoiceDelta(BaseModel):
     index: int = 0
     finish_reason: str = FINISH_REASON_NULL
@@ -109,24 +110,24 @@ class StreamCompletionRes(BaseModel):
     choices: List[ChoiceDelta]
 
 
-# 工具函数
+# Utility functions
 def get_current_timestamp() -> int:
-    """获取当前时间戳"""
+    """Get current timestamp"""
     return int(time.time())
 
 
 def generate_chat_completion_id() -> str:
-    """生成聊天完成ID"""
+    """Generate chat completion ID"""
     return f"chatcmpl-{uuid.uuid4().hex}"
 
 
 def generate_tool_call_id() -> str:
-    """生成工具调用ID"""
+    """Generate tool call ID"""
     return f"call_0_{uuid.uuid4().hex}"
 
 
 def create_usage_dict() -> dict:
-    """创建使用统计字典"""
+    """Create usage statistics dictionary"""
     return {
         "prompt_tokens": 0,
         "completion_tokens": 0,
@@ -135,7 +136,7 @@ def create_usage_dict() -> dict:
 
 
 def get_model_list(func: Callable) -> Callable:
-    """获取模型列表装饰器"""
+    """Get model list decorator"""
 
     def wrapper():
         model_ids = func()
@@ -153,7 +154,7 @@ def get_model_list(func: Callable) -> Callable:
 
 
 def extract_message_content(message: Messages) -> str:
-    """提取消息内容"""
+    """Extract message content"""
     if isinstance(message.content, str):
         return message.content
     else:
@@ -161,12 +162,12 @@ def extract_message_content(message: Messages) -> str:
 
 
 def is_tool_system_message(message: Messages) -> bool:
-    """判断是否为工具系统消息"""
+    """Check if it's a tool system message"""
     return message.role == ROLE_SYSTEM and "Tool" in message.content
 
 
 def build_tool_message(tools: List[Tools]) -> str:
-    """构建工具消息"""
+    """Build tool message"""
     tool_message = "<function_call>\n   "
     for tool in tools:
         tool_message += f"<tool>{tool.function.name}</tool>\n   "
@@ -183,7 +184,7 @@ def build_tool_message(tools: List[Tools]) -> str:
 
 
 def prepare_prompt_without_tools(messages: List[Messages]) -> tuple[str, bool]:
-    """准备没有工具的提示"""
+    """Prepare prompt without tools"""
     is_new_session = False
     last_message = messages[-1]
     prompt = extract_message_content(last_message)
@@ -194,7 +195,7 @@ def prepare_prompt_without_tools(messages: List[Messages]) -> tuple[str, bool]:
                 is_new_session = True
                 prompt = (
                     str(message.content)
-                    + "\n\n你现在有权限使用所有工具\n"
+                    + "\n\nYou now have permission to use all tools\n"
                     + str(prompt)
                 )
                 break
@@ -207,7 +208,7 @@ def prepare_prompt_without_tools(messages: List[Messages]) -> tuple[str, bool]:
 def prepare_prompt_with_tools(
     messages: List[Messages], tools: List[Tools]
 ) -> tuple[str, bool]:
-    """准备有工具的提示"""
+    """Prepare prompt with tools"""
     is_new_session = False
     tool_message = build_tool_message(tools)
     system_prompt = TOOLCALL_PRMPT.replace("{TOOLS_LIST}", tool_message)
@@ -220,21 +221,23 @@ def prepare_prompt_with_tools(
         prompt = str(system_prompt) + str(prompt)
     if len(messages) == 2:
         for message in messages:
-            if message.role == ROLE_SYSTEM:  # 两条消息,其中一条是system message
+            if (
+                message.role == ROLE_SYSTEM
+            ):  # Two messages, one of which is a system message
                 is_new_session = True
                 prompt = str(system_prompt) + str(prompt)
                 break
 
-    return prompt, is_new_session
+    return prompt, is_new_session, system_prompt
 
 
 def is_function_call(response: str) -> bool:
-    """检查响应是否包含函数调用"""
+    """Check if response contains function call"""
     return "FC_USE" in response
 
 
 def parse_function_call(response: str) -> dict:
-    """解析函数调用"""
+    """Parse function call"""
     match = re.search(FUNCTION_CALL_PATTERN, response, re.DOTALL)
     if not match:
         return {}
@@ -257,7 +260,7 @@ def parse_function_call(response: str) -> dict:
 def create_tool_call_response(
     model: str, function_name: str, arguments: dict
 ) -> CompletionRes:
-    """创建工具调用响应"""
+    """Create tool call response"""
     toolcalls = ToolCalls(
         index=0,
         id=generate_tool_call_id(),
@@ -284,7 +287,7 @@ def create_tool_call_response(
 
 
 def create_normal_response(model: str, response: str) -> CompletionRes:
-    """创建普通响应"""
+    """Create normal response"""
     return CompletionRes(
         id=generate_chat_completion_id(),
         object=OBJECT_CHAT_COMPLETION,
@@ -302,7 +305,7 @@ def create_normal_response(model: str, response: str) -> CompletionRes:
 
 
 def create_stream_tool_call_response(model: str, function_name: str, arguments: dict):
-    """创建流式工具调用响应"""
+    """Create streaming tool call response"""
 
     def event_stream():
         toolcalls = ToolCalls(
@@ -332,7 +335,7 @@ def create_stream_tool_call_response(model: str, function_name: str, arguments: 
 
 
 def create_stream_normal_response(model: str, response: str):
-    """创建流式普通响应"""
+    """Create streaming normal response"""
 
     def event_stream():
         result = StreamCompletionRes(
@@ -354,47 +357,89 @@ def create_stream_normal_response(model: str, response: str):
     return StreamingResponse(event_stream(), media_type="text/event-stream")
 
 
-def chatCompletions(func: Callable) -> Callable:
-    """聊天完成装饰器"""
+def chatCompletions(build_all_prompt: int = 0):
+    """Chat completion decorator"""
 
-    def wrapper(res: ChatResponse):
-        model = res.model
-        messages = res.messages
+    def decorator(func: Callable) -> Callable:
+        """Decorator function"""
 
-        # 准备提示和会话状态
-        if not res.tools:
-            prompt, is_new_session = prepare_prompt_without_tools(messages)
-        else:
-            prompt, is_new_session = prepare_prompt_with_tools(messages, res.tools)
-        # 获取模型响应
-        response = func(prompt, new_session=is_new_session, model=model)
+        def wrapper(res: ChatResponse):
+            model = res.model
+            messages = res.messages
 
-        # 检查是否是函数调用
-        if is_function_call(response):
-            # 解析函数调用
-            func_call_data = parse_function_call(response)
-            if func_call_data:
-                if res.stream:
-                    # 流式函数调用响应
-                    return create_stream_tool_call_response(
-                        model,
-                        func_call_data["function_name"],
-                        func_call_data["arguments"],
-                    )
+            # Prepare prompt and session state
+            if not res.tools:
+                prompt, is_new_session = prepare_prompt_without_tools(messages)
+            else:
+                prompt, is_new_session, tools_system_prompt = prepare_prompt_with_tools(
+                    messages, res.tools
+                )
+
+            # For 2api websites, sometimes continuous conversation is not supported, so all messages need to be concatenated into one prompt
+            if build_all_prompt:
+                is_new_session = True
+                if res.tools:
+                    prompt = tools_system_prompt
                 else:
-                    # 非流式函数调用响应
-                    return create_tool_call_response(
-                        model,
-                        func_call_data["function_name"],
-                        func_call_data["arguments"],
-                    )
+                    prompt = ""
+                for msg in messages:
+                    role = msg.role
+                    content = msg.content
+                    if isinstance(content, list):
+                        # Simple handling of multimodal content, only extract text parts
+                        content = " ".join(
+                            [
+                                item.get("text", "")
+                                for item in content
+                                if item.get("type") == "text"
+                            ]
+                        )
 
-        # 普通响应
-        if res.stream:
-            # 流式普通响应
-            return create_stream_normal_response(model, response)
-        else:
-            # 非流式普通响应
-            return create_normal_response(model, response)
+                    # Add to prompt
+                    if role == "system":
+                        # System messages as prefix for Human messages
+                        prompt += f"\n\nHuman: <system>{content}</system>"
+                    elif role == "user":
+                        prompt += f"\n\nHuman: {content}"
+                    elif role == "assistant":
+                        prompt += f"\n\nAssistant: {content}"
+                    elif role == "tool":
+                        # Tool messages as prefix for Tool messages
+                        prompt += f"\n\nTool: <tool>{content}</tool>"
 
-    return wrapper
+            # Get model response
+            response = func(prompt, new_session=is_new_session, model=model)
+            if response is None:
+                return {"error": "No response from model"}
+
+            # Check if it's a function call
+            if is_function_call(response):
+                # Parse function call
+                func_call_data = parse_function_call(response)
+                if func_call_data:
+                    if res.stream:
+                        # Streaming function call response
+                        return create_stream_tool_call_response(
+                            model,
+                            func_call_data["function_name"],
+                            func_call_data["arguments"],
+                        )
+                    else:
+                        # Non-streaming function call response
+                        return create_tool_call_response(
+                            model,
+                            func_call_data["function_name"],
+                            func_call_data["arguments"],
+                        )
+
+            # Normal response
+            if res.stream:
+                # Streaming normal response
+                return create_stream_normal_response(model, response)
+            else:
+                # Non-streaming normal response
+                return create_normal_response(model, response)
+
+        return wrapper
+
+    return decorator

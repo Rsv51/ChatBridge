@@ -70,5 +70,7 @@ Make sure to replace the model_ids list with your desired models.
 
 [gpt4vnet2api.py](tenbin2api.py)
 
+[sophnet2api.py](tenbin2api.py)
+
 ## Deepwiki
 ![pipeline](image/pipeline.png)

@@ -16,7 +16,8 @@ WORKDIR /app
 
 ENV PATH="/root/.local/bin/env:${PATH}"
 
-RUN git clone https://github.com/cnitlrt/ChatBridge && cd ChatBridge && git submodule update --init --recursive && /root/.local/bin/uv venv --python 3.12 && /root/.local/bin/uv pip install -e . && /root/.local/bin/uv pip install -r ./Turnstile-Solver/requirements.txt
+RUN git clone https://github.com/cnitlrt/ChatBridge
+RUN cd ChatBridge && git submodule update --init --recursive && /root/.local/bin/uv venv --python 3.12 && /root/.local/bin/uv pip install -e . && /root/.local/bin/uv pip install -r ./Turnstile-Solver/requirements.txt
 
 RUN cd ChatBridge/Turnstile-Solver && /root/.local/bin/uv run -m camoufox fetch
 

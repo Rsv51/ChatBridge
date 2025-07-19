@@ -112,10 +112,9 @@ async def chat(prompt: str, model: str, new_session: bool):
         "authorization": f"Bearer anon-{token}",
     }
     try:
-        async with httpx.AsyncClient() as client:
-            response = await client.post(
-                url, data=json.dumps(payload), headers=headers, stream=True
-            )
+        response = requests.post(
+            url, data=json.dumps(payload), headers=headers, stream=True
+        )
         content = ""
         response.raise_for_status()  # Check for HTTP errors
         for line in response.iter_lines():

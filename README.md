@@ -14,7 +14,7 @@ uv venv --python 3.12
 uv pip install -e .
 cd Turnstile-Solver
 uv pip install -r requirements.txt
-uv run api_solver.py --browser_type camoufox --headless True --host 0.0.0.0
+# uv run api_solver.py --browser_type camoufox --headless True --host 0.0.0.0 # cloudflare turnsitle solver
 ```
 
 ## Usage

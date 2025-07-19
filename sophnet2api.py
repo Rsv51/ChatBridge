@@ -3,19 +3,21 @@ import json
 import re
 import time
 from chatbridge.chatbridge import *
-from camoufox.sync_api import Camoufox
+from camoufox.async_api import AsyncCamoufox
 from fastapi import FastAPI
 import uvicorn
+import asyncio
+import httpx
 
 token_list = []
 
 
-def get_token():
-    with Camoufox(os="linux", headless=True) as browser:
+async def get_token():
+    async with AsyncCamoufox(os="linux", headless=True) as browser:
         url_with_slash = "https://sophnet.com/#/playground/chat?model=DeepSeek-R1-0528"
-        page = browser.new_page()
-        page.goto(url_with_slash, timeout=60000)
-        cookies = page.context.cookies()
+        page = await browser.new_page()
+        await page.goto(url_with_slash, timeout=60000)
+        cookies = await page.context.cookies()
         token = ""
         for cookie in cookies:
             if cookie.get("name") == "anonymous-token":
@@ -28,12 +30,12 @@ def get_token():
             cleaned_token = re.sub(r"%22", '"', cleaned_token).replace("%2C", ",")
             token = json.loads(cleaned_token).get("anonymousToken", "")
             print(f"Token: {token}")
-            page.get_by_placeholder("请输入内容").fill("i am liu")
+            await page.get_by_placeholder("请输入内容").fill("i am liu")
             button = page.locator(
                 "button.me-1.mb-px.flex.h-8.w-8.items-center.justify-center"
             )
-            button.click()
-            time.sleep(2)
+            await button.click()
+            await asyncio.sleep(2)
             return token
         else:
             print("Anonymous token not found.")
@@ -43,11 +45,11 @@ app = FastAPI(title="sophnet2api")
 
 
 @app.get("/v1/models")
-@get_model_list
-def get_models():
+@async_get_model_list
+async def get_models():
     global token_list
     if len(token_list) == 0:
-        token_list.append(get_token())
+        token_list.append(await get_token())
     token = token_list[0]
     url = "https://sophnet.com/api/public/playground/models?projectUuid=Ar79PWUQUAhjJOja2orHs"
 
@@ -59,7 +61,10 @@ def get_models():
         "authorization": f"Bearer anon-{token}",
     }
     try:
-        response = requests.get(url, headers=headers)
+        # 使用 httpx 异步请求
+        async with httpx.AsyncClient() as client:
+            response = await client.get(url, headers=headers)
+
         model_list = []
         model_lists = response.json().get("result", [])
         for model in model_lists:
@@ -74,12 +79,12 @@ def get_models():
 
 
 @app.post("/v1/chat/completions")
-@chatCompletions(1)
-def chat(prompt: str, model: str, new_session: bool):
+@async_chatCompletions(1)
+async def chat(prompt: str, model: str, new_session: bool):
     global token_list
     print(prompt, model, new_session)
     if len(token_list) == 0:
-        token_list.append(get_token())
+        token_list.append(await get_token())
     token = token_list[0]
     url = f"https://sophnet.com/api/open-apis/projects/Ar79PWUQUAhjJOja2orHs/chat/completions"
 
@@ -107,9 +112,10 @@ def chat(prompt: str, model: str, new_session: bool):
         "authorization": f"Bearer anon-{token}",
     }
     try:
-        response = requests.post(
-            url, data=json.dumps(payload), headers=headers, stream=True
-        )
+        async with httpx.AsyncClient() as client:
+            response = await client.post(
+                url, data=json.dumps(payload), headers=headers, stream=True
+            )
         content = ""
         response.raise_for_status()  # Check for HTTP errors
         for line in response.iter_lines():

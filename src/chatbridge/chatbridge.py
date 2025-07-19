@@ -135,6 +135,24 @@ def create_usage_dict() -> dict:
     }
 
 
+def async_get_model_list(func: Callable) -> Callable:
+    """Get model list decorator"""
+
+    async def wrapper():
+        model_ids = await func()
+        now = get_current_timestamp()
+        models = Models(
+            object=OBJECT_LIST,
+            data=[
+                Model(id=mid, object=OBJECT_MODEL, created=now, owned_by=owner)
+                for mid, owner in model_ids
+            ],
+        )
+        return models
+
+    return wrapper
+
+
 def get_model_list(func: Callable) -> Callable:
     """Get model list decorator"""
 
@@ -409,6 +427,94 @@ def chatCompletions(build_all_prompt: int = 0):
 
             # Get model response
             response = func(prompt, new_session=is_new_session, model=model)
+            if response is None:
+                return {"error": "No response from model"}
+
+            # Check if it's a function call
+            if is_function_call(response):
+                # Parse function call
+                func_call_data = parse_function_call(response)
+                if func_call_data:
+                    if res.stream:
+                        # Streaming function call response
+                        return create_stream_tool_call_response(
+                            model,
+                            func_call_data["function_name"],
+                            func_call_data["arguments"],
+                        )
+                    else:
+                        # Non-streaming function call response
+                        return create_tool_call_response(
+                            model,
+                            func_call_data["function_name"],
+                            func_call_data["arguments"],
+                        )
+
+            # Normal response
+            if res.stream:
+                # Streaming normal response
+                return create_stream_normal_response(model, response)
+            else:
+                # Non-streaming normal response
+                return create_normal_response(model, response)
+
+        return wrapper
+
+    return decorator
+
+
+def async_chatCompletions(build_all_prompt: int = 0):
+    """Chat completion decorator"""
+
+    def decorator(func: Callable) -> Callable:
+        """Decorator function"""
+
+        async def wrapper(res: ChatResponse):
+            model = res.model
+            messages = res.messages
+
+            # Prepare prompt and session state
+            if not res.tools:
+                prompt, is_new_session = prepare_prompt_without_tools(messages)
+            else:
+                prompt, is_new_session, tools_system_prompt = prepare_prompt_with_tools(
+                    messages, res.tools
+                )
+
+            # For 2api websites, sometimes continuous conversation is not supported, so all messages need to be concatenated into one prompt
+            if build_all_prompt:
+                is_new_session = True
+                if res.tools:
+                    prompt = tools_system_prompt
+                else:
+                    prompt = ""
+                for msg in messages:
+                    role = msg.role
+                    content = msg.content
+                    if isinstance(content, list):
+                        # Simple handling of multimodal content, only extract text parts
+                        content = " ".join(
+                            [
+                                item.get("text", "")
+                                for item in content
+                                if item.get("type") == "text"
+                            ]
+                        )
+
+                    # Add to prompt
+                    if role == "system":
+                        # System messages as prefix for Human messages
+                        prompt += f"\n\nHuman: <system>{content}</system>"
+                    elif role == "user":
+                        prompt += f"\n\nHuman: {content}"
+                    elif role == "assistant":
+                        prompt += f"\n\nAssistant: {content}"
+                    elif role == "tool":
+                        # Tool messages as prefix for Tool messages
+                        prompt += f"\n\nTool: <tool>{content}</tool>"
+
+            # Get model response
+            response = await func(prompt, new_session=is_new_session, model=model)
             if response is None:
                 return {"error": "No response from model"}
 

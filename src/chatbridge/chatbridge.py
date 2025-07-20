@@ -419,12 +419,14 @@ def chatCompletions(build_all_prompt: int = 0):
                         prompt += f"\n\nHuman: <system>{content}</system>"
                     elif role == "user":
                         prompt += f"\n\nHuman: {content}"
-                    elif role == "assistant":
+                    elif role == "assistant" and not msg.tool_calls:
                         prompt += f"\n\nAssistant: {content}"
+                    elif role == "assistant" and msg.tool_calls:
+                        prompt += f"\n\nAssistant: 正在调用: {msg.tool_calls[0].function.name}({msg.tool_calls[0].function.arguments})"
                     elif role == "tool":
                         # Tool messages as prefix for Tool messages
-                        # prompt += f"\n\nTool: <tool>{content}</tool>"
-                        prompt += f"\n\nAssistant: {content}"
+                        prompt += f"\n\nTool: <tool>{content}</tool>"
+                        # prompt += f"\n\nTool: {content}"
 
             # Get model response
             response = func(prompt, new_session=is_new_session, model=model)
@@ -508,11 +510,14 @@ def async_chatCompletions(build_all_prompt: int = 0):
                         prompt += f"\n\nHuman: <system>{content}</system>"
                     elif role == "user":
                         prompt += f"\n\nHuman: {content}"
-                    elif role == "assistant":
+                    elif role == "assistant" and not msg.tool_calls:
                         prompt += f"\n\nAssistant: {content}"
+                    elif role == "assistant" and msg.tool_calls:
+                        prompt += f"\n\nAssistant: 正在调用: {msg.tool_calls[0].function.name}({msg.tool_calls[0].function.arguments})"
                     elif role == "tool":
                         # Tool messages as prefix for Tool messages
                         prompt += f"\n\nTool: <tool>{content}</tool>"
+                        # prompt += f"\n\nTool: {content}"
 
             # Get model response
             response = await func(prompt, new_session=is_new_session, model=model)

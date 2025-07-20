@@ -24,7 +24,7 @@ from chatbridge import *
 @app.post("/v1/chat/completions")
 @chatCompletions(build_all_prompt=1)
 # For 2api websites, sometimes continuous conversation is not supported, so if build_all_prompt == 1, all messages need to be concatenated into one prompt
-def retool(prompt: str, new_session: bool = False, model: str = "gpt-4o"):
+def retool(prompt: str, new_session: bool = False, res: ChatResponse):
     """
     some code
     """

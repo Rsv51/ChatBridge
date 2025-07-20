@@ -423,7 +423,8 @@ def chatCompletions(build_all_prompt: int = 0):
                         prompt += f"\n\nAssistant: {content}"
                     elif role == "tool":
                         # Tool messages as prefix for Tool messages
-                        prompt += f"\n\nTool: <tool>{content}</tool>"
+                        # prompt += f"\n\nTool: <tool>{content}</tool>"
+                        prompt += f"\n\nAssistant: {content}"
 
             # Get model response
             response = func(prompt, new_session=is_new_session, model=model)

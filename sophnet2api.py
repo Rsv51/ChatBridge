@@ -80,9 +80,9 @@ async def get_models():
 
 @app.post("/v1/chat/completions")
 @async_chatCompletions(1)
-async def chat(prompt: str, model: str, new_session: bool):
+async def chat(prompt: str, res: ChatResponse, new_session: bool):
     global token_list
-    print(prompt, model, new_session)
+    print(prompt, res.model, new_session, res)
     if len(token_list) == 0:
         token_list.append(await get_token())
     token = token_list[0]
@@ -91,13 +91,13 @@ async def chat(prompt: str, model: str, new_session: bool):
     payload = {
         "temperature": 1,
         "top_p": 1,
-        "frequency_penalty": 0,
-        "presence_penalty": 0,
-        "max_tokens": 2048,
+        "frequency_penalty": res.frequency_penalty,
+        "presence_penalty": res.presence_penalty,
+        "max_tokens": res.max_tokens,
         "webSearchEnable": False,
         "stop": [],
         "stream": "True",
-        "model_id": model,
+        "model_id": res.model,
         "messages": [
             {"role": "user", "content": [{"type": "text", "text": f"{prompt}"}]}
         ],

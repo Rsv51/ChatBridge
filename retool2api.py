@@ -44,10 +44,10 @@ agent_id = get_agent_id()
 
 @app.post("/v1/chat/completions")
 @chatCompletions(1)
-def retool(prompt: str, new_session: bool = False, model: str = "gpt-4o"):
+def retool(prompt: str, res: ChatResponse, new_session: bool):
     global chat_id
     print(new_session, chat_id)
-    set_model(model=model)
+    set_model(model=res.model)
     if new_session:
         chat_id = 0
     if chat_id != 0:

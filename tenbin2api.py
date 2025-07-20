@@ -239,11 +239,11 @@ def get_history_id_list():
 
 @app.post("/v1/chat/completions")
 @chatCompletions(1)
-def tenbin(prompt: str, model, new_session: bool = True):
-    print(f"Prompt: {prompt}, Model: {model}, New Session: {new_session}")
+def tenbin(prompt: str, res: ChatResponse, new_session: bool):
+    print(f"Prompt: {prompt}, Model: {res.model}, New Session: {new_session}")
     task_id = getTaskId()
     captcha = getCaptcha(task_id)
-    execution_token = get_execute_token(captcha, model)
+    execution_token = get_execute_token(captcha, res.model)
     print(execution_token)
     url = "wss://graphql.tenbin.ai/graphql"
     if len(execution_token) == 0 or execution_token is None:

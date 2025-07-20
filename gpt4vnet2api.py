@@ -54,26 +54,26 @@ def get_models():
 
 @app.post("/v1/chat/completions")
 @chatCompletions(build_all_prompt=1)
-def chat(prompt: str, model: str, new_session: bool):
-    if model == "claude-3-5-sonnet":
-        model = "claude3"
-    elif model == "gpt-4o":
-        model = "gpt4o"
-    elif model == "DeepSeek-r1":
-        model = "deepseek"
-    print(prompt, model, new_session)
+def chat(prompt: str, res: ChatResponse, new_session: bool):
+    if res.model == "claude-3-5-sonnet":
+        res.model = "claude3"
+    elif res.model == "gpt-4o":
+        res.model = "gpt4o"
+    elif res.model == "DeepSeek-r1":
+        res.model = "deepseek"
+    print(prompt, res.model, new_session)
     task_id = getTaskId()
     captcha = getCaptcha(task_id=task_id)
     print(captcha)
     uuid = hashlib.md5(captcha.encode()).hexdigest()
-    url = f"https://gpt4vnet.erweima.ai/api/v1/chat/{model}/chat"
+    url = f"https://gpt4vnet.erweima.ai/api/v1/chat/{res.model}/chat"
 
     current_time = datetime.now()
 
     formatted_time = current_time.strftime("%Y-%m-%d %H:%M:%S")
 
     print(formatted_time)
-    if model == "claude3":
+    if res.model == "claude3":
         payload = {
             "prompt": prompt,
             "chatUuid": f"{uuid}",
@@ -83,7 +83,7 @@ def chat(prompt: str, model: str, new_session: bool):
             "searchFlag": False,
             "language": "zh-CN",
         }
-    elif model == "deepseek":
+    elif res.model == "deepseek":
         payload = {
             "prompt": prompt,
             "sessionId": f"{uuid}",
@@ -134,12 +134,12 @@ def chat(prompt: str, model: str, new_session: bool):
             if "DONE" in line.decode():
                 print("DONE")
                 break
-            if model == "claude3" or model == "gpt4o":
+            if res.model == "claude3" or res.model == "gpt4o":
                 json_line = json.loads(line.decode())
                 if json_line.get("data", {}).get("recipient", "") == "title_generation":
                     continue
                 content += json_line.get("data", {}).get("message", "")
-            elif model == "deepseek":
+            elif res.model == "deepseek":
                 json_line = json.loads(line.decode())
                 content += json_line.get("data", {}).get("content", "")
         except Exception as e:

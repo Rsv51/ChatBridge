@@ -75,6 +75,10 @@ class ChatResponse(BaseModel):
     model: str = "gpt-4o"
     stream: bool = False
     tools: List[Tools] = Field(default_factory=list)
+    top_p: float = 1.0
+    frequency_penalty: float = 0.0
+    presence_penalty: float = 0.0
+    max_tokens: int = 16384
 
 
 # Response body
@@ -429,7 +433,7 @@ def chatCompletions(build_all_prompt: int = 0):
                         # prompt += f"\n\nTool: {content}"
 
             # Get model response
-            response = func(prompt, new_session=is_new_session, model=model)
+            response = func(prompt, new_session=is_new_session, res=res)
             if response is None:
                 return {"error": "No response from model"}
 
@@ -520,7 +524,7 @@ def async_chatCompletions(build_all_prompt: int = 0):
                         # prompt += f"\n\nTool: {content}"
 
             # Get model response
-            response = await func(prompt, new_session=is_new_session, model=model)
+            response = await func(prompt, new_session=is_new_session, res=res)
             if response is None:
                 return {"error": "No response from model"}
 

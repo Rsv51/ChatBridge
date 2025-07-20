@@ -21,4 +21,6 @@ RUN cd ChatBridge && git submodule update --init --recursive && /root/.local/bin
 
 RUN cd ChatBridge/Turnstile-Solver && /root/.local/bin/uv run -m camoufox fetch
 
-ENTRYPOINT ["/bin/bash"]
+RUN rm -rf /var/lib/apt/lists/*
+
+ENTRYPOINT ["/root/.local/bin/uv", "run", "--directory", "/app/ChatBridge", "sophnet2api.py"]
